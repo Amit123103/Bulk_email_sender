@@ -1,4 +1,4 @@
--r ../requirements.txt
+-r requirements.txt
 flask==3.0.0
 flask-socketio==5.3.6
 flask-login==0.6.3
