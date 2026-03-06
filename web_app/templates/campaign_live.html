@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Live Monitor — Bulk Email Pro{% endblock %}
+{% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+{% endblock %}
+{% block content %}
+<h1 class="page-title">📤 Campaign Live Monitor</h1>
+<div class="monitor-controls">
+    <button class="btn btn-warning" id="pauseBtn" onclick="togglePause()">⏸ Pause</button>
+    <button class="btn btn-danger" id="stopBtn" onclick="stopCampaign()">⏹ Stop</button>
+</div>
+<div class="monitor-stats" id="monitor-stats">
+    <div class="stat-card">
+        <div class="stat-value" id="m-sent">0</div>
+        <div class="stat-label">✅ Sent</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-value" id="m-failed">0</div>
+        <div class="stat-label">❌ Failed</div>
+    </div>
+    <div class="stat-card accent">
+        <div class="stat-value" id="m-total">0</div>
+        <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-value" id="m-pct">0%</div>
+        <div class="stat-label">Progress</div>
+    </div>
+</div>
+<div class="progress-container">
+    <div class="progress-bar-lg">
+        <div class="progress-fill-lg" id="m-bar" style="width:0%"></div>
+    </div>
+    <p id="m-progress-text">Waiting for campaign to start...</p>
+</div>
+<div class="log-container">
+    <h3>Live Log</h3>
+    <div class="log-box" id="log-box"></div>
+</div>
+<div class="monitor-actions" style="margin-top:20px">
+    <a href="{{ url_for('reports') }}" class="btn btn-accent">📊 View Report</a>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    const socket = io();
+    let isPaused = false;
+    socket.on('progress', function (data) {
+        const r = data.result;
+        const pct = Math.round(data.index / data.total * 100);
+        document.getElementById('m-sent').textContent = data.sent;
+        document.getElementById('m-failed').textContent = data.failed;
+        document.getElementById('m-total').textContent = data.index + ' / ' + data.total;
+        document.getElementById('m-pct').textContent = pct + '%';
+        document.getElementById('m-bar').style.width = pct + '%';
+        document.getElementById('m-progress-text').textContent = data.index + ' of ' + data.total + ' (' + pct + '%)';
+        const log = document.getElementById('log-box');
+        const ts = new Date().toLocaleTimeString();
+        let cls = 'log-sent', icon = '✅';
+        if (r.status === 'failed') { cls = 'log-failed'; icon = '❌'; }
+        else if (r.status === 'rotation') { cls = 'log-event'; icon = '🔄'; }
+        else if (r.status === 'warning') { cls = 'log-event'; icon = '⚠️'; }
+        const msg = r.status === 'sent' ? r.account_used + ' → ' + r._email :
+            r.status === 'failed' ? 'FAILED → ' + r._email + ' — ' + (r.error || '') :
+                r.message || r.error || '';
+        log.innerHTML += '<div class="' + cls + '">[' + ts + '] ' + icon + ' ' + msg + '</div>';
+        log.scrollTop = log.scrollHeight;
+        if (log.children.length > 500) log.removeChild(log.firstChild);
+    });
+    socket.on('complete', function (data) {
+        document.getElementById('m-progress-text').textContent = '🎉 Campaign Complete! Sent: ' + data.sent + ', Failed: ' + data.failed;
+        document.getElementById('m-bar').style.width = '100%';
+        document.getElementById('m-bar').style.background = '#2ecc71';
+    });
+    function togglePause() {
+        fetch('/campaign/pause', { method: 'POST' }).then(r => r.json()).then(d => {
+            isPaused = d.paused;
+            document.getElementById('pauseBtn').textContent = isPaused ? '▶ Resume' : '⏸ Pause';
+        });
+    }
+    function stopCampaign() {
+        if (confirm('Stop the campaign?')) {
+            fetch('/campaign/stop', { method: 'POST' }).then(r => r.json()).then(d => {
+                document.getElementById('m-progress-text').textContent = '⏹ Campaign stopped by user';
+            });
+        }
+    }
+</script>
+{% endblock %}

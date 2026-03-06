@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Bulk Email Pro{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">📧 Bulk Email Pro</div>
+        {% if session.get('user_id') %}
+        <div class="nav-links">
+            <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint=='dashboard' %}active{% endif %}">Dashboard</a>
+            <a href="{{ url_for('accounts') }}" class="{% if request.endpoint=='accounts' %}active{% endif %}">Accounts</a>
+            <a href="{{ url_for('campaign_new') }}" class="{% if request.endpoint=='campaign_new' %}active{% endif %}">New Campaign</a>
+            <a href="{{ url_for('reports') }}" class="{% if request.endpoint=='reports' %}active{% endif %}">Reports</a>
+        </div>
+        <div class="nav-user">
+            <span>👤 {{ session.get('username','User') }}</span>
+            <a href="{{ url_for('logout') }}" class="btn-sm btn-danger">Logout</a>
+        </div>
+        {% endif %}
+    </nav>
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </div>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

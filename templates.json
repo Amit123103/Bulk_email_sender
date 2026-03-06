@@ -1,0 +1,22 @@
+{
+    "Professional Introduction": {
+        "subject": "Introduction — {{company}} Partnership Opportunity",
+        "body": "<h2>Hello {{first_name}},</h2>\n<p>I hope this message finds you well. My name is [Your Name], and I'm reaching out from [Your Company].</p>\n<p>I came across {{company}} and was impressed by your work. I believe there's a great opportunity for us to collaborate.</p>\n<p>Would you be open to a brief conversation this week?</p>\n<p>Best regards,<br><strong>[Your Name]</strong></p>"
+    },
+    "Follow-Up": {
+        "subject": "Following Up — {{first_name}}, quick question",
+        "body": "<h2>Hi {{first_name}},</h2>\n<p>I wanted to follow up on my previous message. I understand you're busy, so I'll keep this brief.</p>\n<p>I'd love to connect for just 15 minutes to discuss how we might work together.</p>\n<p>Would any time this week work for you?</p>\n<p>Thanks,<br><strong>[Your Name]</strong></p>"
+    },
+    "Partnership Proposal": {
+        "subject": "Partnership Proposal for {{company}}",
+        "body": "<h2>Dear {{first_name}},</h2>\n<p>I'm writing to propose a strategic partnership between our organizations.</p>\n<p>After researching {{company}}, I believe combining our strengths could create significant value for both parties.</p>\n<p>I've prepared a brief overview of the partnership and would welcome the opportunity to discuss it further.</p>\n<p>Warm regards,<br><strong>[Your Name]</strong></p>"
+    },
+    "Service Offering": {
+        "subject": "How We Can Help {{company}} Grow",
+        "body": "<h2>Hello {{first_name}},</h2>\n<p>Are you looking to [achieve specific goal]? We've helped companies like {{company}} achieve remarkable results.</p>\n<p><strong>Here's what we offer:</strong></p>\n<ul>\n<li>Benefit 1 — Description</li>\n<li>Benefit 2 — Description</li>\n<li>Benefit 3 — Description</li>\n</ul>\n<p>I'd love to show you how we can help. Shall we schedule a demo?</p>\n<p>Best,<br><strong>[Your Name]</strong></p>"
+    },
+    "Event Invitation": {
+        "subject": "You're Invited — Exclusive Event for {{company}}",
+        "body": "<h2>Dear {{first_name}},</h2>\n<p>We're hosting an exclusive event that I think would be incredibly valuable for you and the {{company}} team.</p>\n<p><strong>Event Details:</strong></p>\n<p>📅 Date: [Date]<br>🕐 Time: [Time]<br>📍 Location: [Location/Online]</p>\n<p>Spots are limited. Would you like me to reserve a seat for you?</p>\n<p>Looking forward to seeing you there!<br><strong>[Your Name]</strong></p>"
+    }
+}

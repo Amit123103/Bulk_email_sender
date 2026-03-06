@@ -1,0 +1,30 @@
+# Virtual Environment
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# Application Data & Secrets
+desktop_app/secret.key
+desktop_app/accounts.json
+desktop_app/schedules.json
+desktop_app/contacts.json
+desktop_app/ab_results.json
+desktop_app/draft.json
+desktop_app/templates.json
+
+web_app/data/
+web_app/secret.key
+
+# Logs & Temp files
+*.log
+*.csv
+*.xlsx
+*.xls
+.gemini/

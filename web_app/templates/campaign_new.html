@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}New Campaign — Bulk Email Pro{% endblock %}
+{% block content %}
+<h1 class="page-title">🚀 New Campaign</h1>
+<div class="wizard">
+    <!-- Step 1: Account Selection -->
+    <div class="wizard-step" id="step1">
+        <h2>Step 1: Choose Send Account</h2>
+        <div class="form-group">
+            <label>Send From</label>
+            <select id="send-account" class="form-control">
+                {% for acc in accounts %}
+                <option value="{{ acc.id }}">{{ acc.nickname }} — {{ acc.email }} ({{ acc.daily_limit - acc.sent_today
+                    }} remaining)</option>
+                {% endfor %}
+            </select>
+        </div>
+        <label class="checkbox-label">
+            <input type="checkbox" id="use-rotation"> 🔄 Use Account Rotation (cycle through all accounts)
+        </label>
+        <button class="btn btn-accent" onclick="showStep(2)">Next →</button>
+    </div>
+
+    <!-- Step 2: Upload Recipients -->
+    <div class="wizard-step hidden" id="step2">
+        <h2>Step 2: Upload Recipients</h2>
+        <div class="upload-zone" id="dropzone" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
+            <p>📂 Drag & drop Excel/CSV here or</p>
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="uploadFile()" style="display:none">
+            <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">Browse File</button>
+        </div>
+        <div id="upload-stats" class="hidden">
+            <div class="stats-bar" id="email-stats"></div>
+            <div class="form-group">
+                <label>Email Column</label>
+                <select id="email-col" class="form-control" onchange="validateCol()"></select>
+            </div>
+            <div id="vars-list" class="vars-chips"></div>
+            <div class="table-container">
+                <table id="preview-table" class="data-table"></table>
+            </div>
+        </div>
+        <div class="wizard-nav">
+            <button class="btn btn-outline" onclick="showStep(1)">← Back</button>
+            <button class="btn btn-accent" onclick="showStep(3)">Next →</button>
+        </div>
+    </div>
+
+    <!-- Step 3: Compose -->
+    <div class="wizard-step hidden" id="step3">
+        <h2>Step 3: Compose Email</h2>
+        <div class="form-group">
+            <label>Subject</label>
+            <input id="subject" class="form-control" placeholder="Your email subject..." maxlength="100">
+            <span class="char-count"><span id="subj-count">0</span>/100</span>
+        </div>
+        <div class="form-group">
+            <label>Format</label>
+            <label class="radio-label"><input type="radio" name="format" value="html" checked> HTML</label>
+            <label class="radio-label"><input type="radio" name="format" value="text"> Plain Text</label>
+        </div>
+        <div class="form-group">
+            <label>Email Body</label>
+            <textarea id="body" class="form-control code-editor" rows="12"
+                placeholder="Dear {{name}},&#10;&#10;Your email content here..."></textarea>
+        </div>
+        <div id="compose-vars" class="vars-chips"></div>
+        <div class="form-group">
+            <label>Send Delay</label>
+            <input type="range" id="delay" min="0.5" max="10" step="0.5" value="1.5"
+                oninput="document.getElementById('delay-val').textContent=this.value+'s'">
+            <span id="delay-val">1.5s</span>
+        </div>
+        <div class="wizard-nav">
+            <button class="btn btn-outline" onclick="showStep(2)">← Back</button>
+            <button class="btn btn-accent" onclick="showStep(4)">Review →</button>
+        </div>
+    </div>
+
+    <!-- Step 4: Review & Launch -->
+    <div class="wizard-step hidden" id="step4">
+        <h2>Step 4: Review & Launch</h2>
+        <div class="review-card">
+            <div id="review-summary"></div>
+            <div id="checklist" class="checklist"></div>
+        </div>
+        <div class="wizard-nav">
+            <button class="btn btn-outline" onclick="showStep(3)">← Back</button>
+            <button class="btn btn-launch" id="launchBtn" onclick="launchCampaign()">🚀 START SENDING</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    let uploadData = null;
+    function showStep(n) {
+        document.querySelectorAll('.wizard-step').forEach(s => s.classList.add('hidden'));
+        document.getElementById('step' + n).classList.remove('hidden'); if (n === 4) buildReview();
+    }
+    function handleDrop(e) {
+        e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) {
+            document.getElementById('fileInput').files = e.dataTransfer.files; uploadFile();
+        }
+    }
+    function uploadFile() {
+        const f = document.getElementById('fileInput').files[0]; if (!f) return;
+        const fd = new FormData(); fd.append('file', f);
+        fetch('/campaign/upload-excel', { method: 'POST', body: fd }).then(r => r.json()).then(d => {
+            if (!d.success) { alert('Error: ' + d.error); return; }
+            uploadData = d; document.getElementById('upload-stats').classList.remove('hidden');
+            const sel = document.getElementById('email-col'); sel.innerHTML = '';
+            d.columns.forEach(c => {
+                const o = document.createElement('option'); o.value = c; o.text = c;
+                if (c === d.detected_column) o.selected = true; sel.appendChild(o);
+            });
+            if (d.email_stats) showStats(d.email_stats);
+            if (d.personalization_vars) showVars(d.personalization_vars);
+            if (d.preview) showPreview(d.preview);
+        });
+    }
+    function validateCol() {
+        const col = document.getElementById('email-col').value;
+        fetch('/campaign/validate-emails', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ column: col })
+        }).then(r => r.json()).then(d => {
+            if (d.stats) showStats(d.stats); if (d.vars) showVars(d.vars); if (d.preview) showPreview(d.preview);
+        });
+    }
+    function showStats(s) {
+        document.getElementById('email-stats').innerHTML =
+        `✅ Valid: ${s.valid} | ❌ Invalid: ${s.invalid} | 🔄 Duplicates: ${s.duplicates} | Total: ${s.total_rows}`;
+    }
+    function showVars(vars) {
+        const html = vars.map(v => `<span class="var-chip" onclick="insertVar('${v}')">${v}</span>`).join('');
+        document.getElementById('vars-list').innerHTML = html; document.getElementById('compose-vars').innerHTML = html;
+    }
+    function showPreview(rows) {
+        if (!rows.length) return; const cols = Object.keys(rows[0]);
+        let h = '<thead><tr>' + cols.map(c => '<th>' + c + '</th>').join('') + '</tr></thead><tbody>';
+        rows.forEach(r => { h += '<tr>' + cols.map(c => '<td>' + (r[c] || '') + '</td>').join('') + '</tr>'; });
+        h += '</tbody>'; document.getElementById('preview-table').innerHTML = h;
+    }
+    function insertVar(v) {
+        const b = document.getElementById('body'); const p = b.selectionStart;
+        b.value = b.value.slice(0, p) + v + b.value.slice(p); b.focus();
+    }
+    document.getElementById('subject').addEventListener('input', function () {
+        document.getElementById('subj-count').textContent = this.value.length;
+    });
+    function buildReview() {
+        const cnt = uploadData?.email_stats?.valid || 0;
+        const subj = document.getElementById('subject').value;
+        const delay = document.getElementById('delay').value;
+        const est = Math.round(cnt * delay / 60);
+        document.getElementById('review-summary').innerHTML =
+            `<p><strong>Recipients:</strong> ${cnt} valid emails</p>
+<p><strong>Subject:</strong> ${subj || '(empty)'}</p>
+<p><strong>Delay:</strong> ${delay}s per email</p>
+<p><strong>Estimated time:</strong> ~${est} minutes</p>`;
+        let checks = ''; const hasAccounts = {{ accounts| length
+    }}> 0;
+    checks += `<div class="${hasAccounts ? 'check-ok' : 'check-fail'}">${hasAccounts ? '✅' : '❌'} Email account connected</div>`;
+    checks += `<div class="${cnt > 0 ? 'check-ok' : 'check-fail'}">${cnt > 0 ? '✅' : '❌'} Recipients loaded (${cnt})</div>`;
+    checks += `<div class="${subj ? 'check-ok' : 'check-fail'}">${subj ? '✅' : '❌'} Subject line</div>`;
+    const body = document.getElementById('body').value;
+    checks += `<div class="${body ? 'check-ok' : 'check-fail'}">${body ? '✅' : '❌'} Email body</div>`;
+    document.getElementById('checklist').innerHTML = checks;}
+    function launchCampaign() {
+        if (!confirm('Start sending campaign?')) return;
+        const data = {
+            subject: document.getElementById('subject').value, body: document.getElementById('body').value,
+            is_html: document.querySelector('input[name=format]:checked').value === 'html',
+            delay: document.getElementById('delay').value, rotation: document.getElementById('use-rotation').checked
+        };
+        fetch('/campaign/launch', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }).then(r => r.json()).then(d => {
+            if (d.success) window.location = '/campaign/live'; else alert('Error: ' + d.error);
+        });
+    }
+</script>
+{% endblock %}

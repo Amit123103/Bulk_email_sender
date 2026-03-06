@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Reports — Bulk Email Pro{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📊 Campaign Report</h1>
+    <div class="export-btns">
+        <a href="{{ url_for('export_report', filter='all') }}" class="btn btn-accent">📥 Export All</a>
+        <a href="{{ url_for('export_report', filter='sent') }}" class="btn-sm btn-outline">📥 Sent Only</a>
+        <a href="{{ url_for('export_report', filter='failed') }}" class="btn-sm btn-outline">📥 Failed Only</a>
+    </div>
+</div>
+{% if campaign %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ results|length }}</div>
+        <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-value">{{ results|selectattr('status','equalto','sent')|list|length }}</div>
+        <div class="stat-label">✅ Sent</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-value">{{ results|selectattr('status','equalto','failed')|list|length }}</div>
+        <div class="stat-label">❌ Failed</div>
+    </div>
+    <div class="stat-card accent">
+        {% set sent_count = results|selectattr('status','equalto','sent')|list|length %}
+        {% set total_count = results|length %}
+        <div class="stat-value">{{ (sent_count / total_count * 100)|round(1) if total_count > 0 else 0 }}%</div>
+        <div class="stat-label">Success Rate</div>
+    </div>
+</div>
+<div class="filter-bar">
+    <button class="btn-sm btn-accent filter-btn active" onclick="filterResults('all',this)">All</button>
+    <button class="btn-sm btn-outline filter-btn" onclick="filterResults('sent',this)">✅ Sent</button>
+    <button class="btn-sm btn-outline filter-btn" onclick="filterResults('failed',this)">❌ Failed</button>
+    <input type="text" id="searchBox" class="form-control search-input" placeholder="Search email..."
+        oninput="searchResults()">
+</div>
+<div class="table-container">
+    <table class="data-table" id="resultsTable">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Account Used</th>
+                <th>Time</th>
+                <th>Error</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in results %}
+            <tr class="result-row" data-status="{{ r.status }}">
+                <td>{{ loop.index }}</td>
+                <td>{{ r._email }}</td>
+                <td><span class="badge badge-{{ 'success' if r.status=='sent' else 'danger' }}">{{ r.status }}</span>
+                </td>
+                <td>{{ r.account_used }}</td>
+                <td>{{ r.timestamp.split('T')[1][:8] if 'T' in (r.timestamp|default('',true)) else r.timestamp }}</td>
+                <td class="error-cell">{{ r.error or '' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No campaign data yet. Launch a campaign to see results here.</p>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+    function filterResults(status, btn) {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active'); document.querySelectorAll('.result-row').forEach(r => {
+            r.style.display = (status === 'all' || r.dataset.status === status) ? '' : 'none';
+        });
+    }
+    function searchResults() {
+        const q = document.getElementById('searchBox').value.toLowerCase();
+        document.querySelectorAll('.result-row').forEach(r => { r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+    }
+</script>
+{% endblock %}

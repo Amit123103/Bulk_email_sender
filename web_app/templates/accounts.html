@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Email Accounts — Bulk Email Pro{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📋 My Email Accounts</h1>
+    <button class="btn btn-accent" onclick="document.getElementById('addModal').style.display='flex'">+ Add
+        Account</button>
+</div>
+<div class="stats-bar">
+    <span>{{ stats.total_accounts }} accounts</span>
+    <span>{{ stats.active_accounts }} active</span>
+    <span>{{ stats.total_remaining_today }} emails remaining today</span>
+    <button class="btn-sm btn-outline" onclick="testAll()">🔄 Test All</button>
+</div>
+<div class="accounts-grid">
+    {% for acc in accounts %}
+    <div class="account-card" id="acc-{{ acc.id }}">
+        <div class="acc-header">
+            <span class="acc-status status-{{ acc.status }}">
+                {% if acc.status=='connected' %}✅{% elif acc.status=='failed' %}❌{% elif acc.status=='limit_reached'
+                %}⚠️{% else %}❓{% endif %}
+            </span>
+            <h3>{{ acc.nickname }}</h3>
+            {% if acc.is_default %}<span class="badge badge-warning">⭐ DEFAULT</span>{% endif %}
+        </div>
+        <p class="acc-email">{{ acc.email }}</p>
+        <div class="progress-bar">
+            <div class="progress-fill"
+                style="width:{{ (acc.sent_today / acc.daily_limit * 100) if acc.daily_limit > 0 else 0 }}%"></div>
+        </div>
+        <p class="acc-usage">{{ acc.sent_today }} / {{ acc.daily_limit }} sent today</p>
+        {% if acc.last_error %}<p class="acc-error">{{ acc.last_error[:80] }}</p>{% endif %}
+        <div class="acc-actions">
+            <button class="btn-sm btn-outline" onclick="testAccount('{{ acc.id }}')">Test</button>
+            <form method="POST" action="{{ url_for('delete_account', aid=acc.id) }}" style="display:inline"
+                onsubmit="return confirm('Delete this account?')">
+                <button type="submit" class="btn-sm btn-danger">Delete</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    {% if not accounts %}
+    <div class="empty-state">
+        <p>No email accounts yet. Click <strong>+ Add Account</strong> to get started.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add Account Modal -->
+<div id="addModal" class="modal" style="display:none">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add Email Account</h2>
+            <button class="modal-close"
+                onclick="document.getElementById('addModal').style.display='none'">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('add_account') }}">
+            <div class="form-group">
+                <label>Provider</label>
+                <select id="provider" class="form-control" onchange="fillPreset()">
+                    <option value="gmail">Gmail</option>
+                    <option value="outlook">Outlook / Hotmail</option>
+                    <option value="yahoo">Yahoo Mail</option>
+                    <option value="custom">Custom SMTP</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Nickname</label><input name="nickname" class="form-control" required>
+                </div>
+                <div class="form-group"><label>Email</label><input name="email" type="email" class="form-control"
+                        required></div>
+            </div>
+            <div class="form-group"><label>Password / App Password</label><input name="password" type="password"
+                    class="form-control" required></div>
+            <div class="form-row">
+                <div class="form-group"><label>SMTP Host</label><input name="smtp_host" id="smtp_host"
+                        class="form-control" value="smtp.gmail.com" required></div>
+                <div class="form-group"><label>Port</label><input name="smtp_port" id="smtp_port" class="form-control"
+                        value="587" required></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Security</label>
+                    <select name="smtp_security" id="smtp_security" class="form-control">
+                        <option value="TLS">TLS</option>
+                        <option value="SSL">SSL</option>
+                        <option value="None">None</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Daily Limit</label><input name="daily_limit" id="daily_limit"
+                        class="form-control" value="500"></div>
+            </div>
+            <div id="provider-help" class="help-text">Use Gmail App Password (Google Account > Security > App Passwords)
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline"
+                    onclick="document.getElementById('addModal').style.display='none'">Cancel</button>
+                <button type="submit" class="btn btn-accent">💾 Save Account</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    const presets = {
+        gmail: { host: "smtp.gmail.com", port: 587, sec: "TLS", limit: 500, help: "Use Gmail App Password (Google > Security > App Passwords)" },
+        outlook: { host: "smtp-mail.outlook.com", port: 587, sec: "TLS", limit: 300, help: "Use Outlook password or App Password if MFA enabled" },
+        yahoo: { host: "smtp.mail.yahoo.com", port: 465, sec: "SSL", limit: 500, help: "Generate App Password at Yahoo Account Security" },
+        custom: { host: "", port: 587, sec: "TLS", limit: 500, help: "Enter your hosting provider's SMTP details" }
+    };
+    function fillPreset() {
+        const p = presets[document.getElementById('provider').value];
+        document.getElementById('smtp_host').value = p.host; document.getElementById('smtp_port').value = p.port;
+        document.getElementById('smtp_security').value = p.sec; document.getElementById('daily_limit').value = p.limit;
+        document.getElementById('provider-help').textContent = p.help;
+    }
+    function testAccount(aid) { fetch('/accounts/' + aid + '/test', { method: 'POST' }).then(r => r.json()).then(d => alert(d.message)); }
+    function testAll() {
+        fetch('/accounts/test-all', { method: 'POST' }).then(r => r.json()).then(d => {
+            const ok = d.filter(r => r.success).length; alert(ok + '/' + d.length + ' accounts connected'); location.reload();
+        });
+    }
+</script>
+{% endblock %}

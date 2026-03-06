@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Bulk Email Pro{% endblock %}
+{% block content %}
+<h1 class="page-title">Dashboard</h1>
+<p class="page-subtitle">Welcome back, {{ username }}!</p>
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">📋</div>
+        <div class="stat-value">{{ stats.total_accounts }}</div>
+        <div class="stat-label">Email Accounts</div>
+    </div>
+    <div class="stat-card accent">
+        <div class="stat-icon">✅</div>
+        <div class="stat-value">{{ stats.active_accounts }}</div>
+        <div class="stat-label">Active Accounts</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-icon">📤</div>
+        <div class="stat-value">{{ stats.total_sent_today }}</div>
+        <div class="stat-label">Sent Today</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-icon">📊</div>
+        <div class="stat-value">{{ stats.total_remaining_today }}</div>
+        <div class="stat-label">Remaining Today</div>
+    </div>
+</div>
+<div class="quick-actions">
+    <h2>Quick Actions</h2>
+    <div class="action-grid">
+        <a href="{{ url_for('accounts') }}" class="action-card">
+            <span class="action-icon">📋</span>
+            <span>Manage Accounts</span>
+        </a>
+        <a href="{{ url_for('campaign_new') }}" class="action-card">
+            <span class="action-icon">🚀</span>
+            <span>New Campaign</span>
+        </a>
+        <a href="{{ url_for('reports') }}" class="action-card">
+            <span class="action-icon">📊</span>
+            <span>View Reports</span>
+        </a>
+    </div>
+</div>
+{% endblock %}
