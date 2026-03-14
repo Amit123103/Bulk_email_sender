@@ -66,6 +66,11 @@
         </div>
         <div id="compose-vars" class="vars-chips"></div>
         <div class="form-group">
+            <label>Attachments (Optional)</label>
+            <input type="file" id="attachmentsInput" multiple class="form-control" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg">
+            <span class="char-count" style="float: left; margin-top: 5px;" id="attachments-count">0 files selected</span>
+        </div>
+        <div class="form-group">
             <label>Send Delay</label>
             <input type="range" id="delay" min="0.5" max="10" step="0.5" value="1.5"
                 oninput="document.getElementById('delay-val').textContent=this.value+'s'">
@@ -130,7 +135,7 @@
     }
     function showStats(s) {
         document.getElementById('email-stats').innerHTML =
-        `✅ Valid: ${s.valid} | ❌ Invalid: ${s.invalid} | 🔄 Duplicates: ${s.duplicates} | Total: ${s.total_rows}`;
+            `✅ Valid: ${s.valid} | ❌ Invalid: ${s.invalid} | 🔄 Duplicates: ${s.duplicates} | Total: ${s.total_rows}`;
     }
     function showVars(vars) {
         const html = vars.map(v => `<span class="var-chip" onclick="insertVar('${v}')">${v}</span>`).join('');
@@ -153,26 +158,67 @@
         const cnt = uploadData?.email_stats?.valid || 0;
         const subj = document.getElementById('subject').value;
         const delay = document.getElementById('delay').value;
+        const attachments = document.getElementById('attachmentsInput').files;
         const est = Math.round(cnt * delay / 60);
         document.getElementById('review-summary').innerHTML =
             `<p><strong>Recipients:</strong> ${cnt} valid emails</p>
 <p><strong>Subject:</strong> ${subj || '(empty)'}</p>
 <p><strong>Delay:</strong> ${delay}s per email</p>
+<p><strong>Attachments:</strong> ${attachments.length} files</p>
 <p><strong>Estimated time:</strong> ~${est} minutes</p>`;
         let checks = ''; const hasAccounts = {{ accounts| length
-    }}> 0;
+    }} > 0;
     checks += `<div class="${hasAccounts ? 'check-ok' : 'check-fail'}">${hasAccounts ? '✅' : '❌'} Email account connected</div>`;
     checks += `<div class="${cnt > 0 ? 'check-ok' : 'check-fail'}">${cnt > 0 ? '✅' : '❌'} Recipients loaded (${cnt})</div>`;
     checks += `<div class="${subj ? 'check-ok' : 'check-fail'}">${subj ? '✅' : '❌'} Subject line</div>`;
     const body = document.getElementById('body').value;
     checks += `<div class="${body ? 'check-ok' : 'check-fail'}">${body ? '✅' : '❌'} Email body</div>`;
-    document.getElementById('checklist').innerHTML = checks;}
-    function launchCampaign() {
+    document.getElementById('checklist').innerHTML = checks;
+    }
+    
+    document.getElementById('attachmentsInput').addEventListener('change', function() {
+        document.getElementById('attachments-count').textContent = `${this.files.length} files selected`;
+    });
+
+    async function launchCampaign() {
         if (!confirm('Start sending campaign?')) return;
+        
+        // Handle attachments conditionally
+        const attachmentsInput = document.getElementById('attachmentsInput');
+        let attachmentPaths = [];
+        if (attachmentsInput.files.length > 0) {
+            const fd = new FormData();
+            for (let i = 0; i < attachmentsInput.files.length; i++) {
+                fd.append('attachments', attachmentsInput.files[i]);
+            }
+            try {
+                // Change the launch button text to indicate upload progress
+                const launchBtn = document.getElementById('launchBtn');
+                const origText = launchBtn.innerHTML;
+                launchBtn.innerHTML = 'Uploading Attachments...';
+                launchBtn.disabled = true;
+                
+                const response = await fetch('/campaign/upload-attachments', { method: 'POST', body: fd });
+                const data = await response.json();
+                
+                if (!data.success) {
+                    alert('Error uploading attachments: ' + data.error);
+                    launchBtn.innerHTML = origText;
+                    launchBtn.disabled = false;
+                    return;
+                }
+                attachmentPaths = data.paths;
+            } catch (err) {
+                alert('Connection error during upload');
+                return;
+            }
+        }
+        
         const data = {
             subject: document.getElementById('subject').value, body: document.getElementById('body').value,
             is_html: document.querySelector('input[name=format]:checked').value === 'html',
-            delay: document.getElementById('delay').value, rotation: document.getElementById('use-rotation').checked
+            delay: document.getElementById('delay').value, rotation: document.getElementById('use-rotation').checked,
+            attachment_paths: attachmentPaths
         };
         fetch('/campaign/launch', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },

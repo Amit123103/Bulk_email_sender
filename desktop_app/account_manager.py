@@ -419,6 +419,20 @@ class AccountManager:
         except smtplib.SMTPAuthenticationError as e:
             error_msg = e.smtp_error.decode('utf-8', errors='replace') if isinstance(e.smtp_error, bytes) else str(e.smtp_error)
             msg = f"Authentication failed: {e.smtp_code} {error_msg}"
+            
+            # Special diagnostics for Gmail
+            if "5.7.8" in msg and "gmail" in acc["smtp_host"].lower():
+                pwd = acc["password"]
+                pwd_clean = "".join(pwd.split())
+                is_16_chars = len(pwd_clean) == 16
+                msg = f"Google rejected your password.\n\nDiagnostics:\n"
+                msg += f"- Password length entered: {len(pwd)} characters\n"
+                msg += f"- Contains 16 chars without spaces? {'Yes' if is_16_chars else 'NO'}\n\n"
+                if not is_16_chars:
+                    msg += "Fix: You MUST use a 16-character Google App Password, your normal password will NOT work."
+                else:
+                    msg += "Fix: Make sure you copied the App Password exactly and that 2-Step Verification is ON."
+            
             self.update_account_status(account_id, "failed", msg)
             return {"success": False, "message": msg, "account_id": account_id}
         except smtplib.SMTPConnectError as e:

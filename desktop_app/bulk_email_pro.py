@@ -4,14 +4,15 @@ from tkinter import ttk, filedialog, messagebox, scrolledtext, simpledialog
 import threading, time, queue, json, os, webbrowser
 from datetime import datetime
 from pathlib import Path
-from account_manager import AccountManager
-from excel_processor import ExcelProcessor
-from smtp_engine import SMTPEngine
-from ai_generator import AIEmailGenerator
-from spam_checker import SpamChecker
-from scheduler import CampaignScheduler
-from ab_tester import ABTester
-from contact_manager import ContactManager
+from account_manager import AccountManager # type: ignore
+from excel_processor import ExcelProcessor # type: ignore
+from smtp_engine import SMTPEngine # type: ignore
+from ai_generator import AIEmailGenerator # type: ignore
+from spam_checker import SpamChecker # type: ignore
+from scheduler import CampaignScheduler # type: ignore
+from ab_tester import ABTester # type: ignore
+from contact_manager import ContactManager # type: ignore
+import typing
 
 DATA_DIR = Path(os.path.expanduser("~")) / ".bulk_email_pro"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -35,7 +36,12 @@ class AddAccountDialog(tk.Toplevel):
         super().__init__(parent)
         self.am = account_manager
         self.account_id = account_id
-        self.result = None
+        self.result: typing.Optional[bool] = None
+        self.provider_var: tk.StringVar = None # type: ignore
+        self.sec_var: tk.StringVar = None # type: ignore
+        self.entries: dict[str, tk.Entry] = {}
+        self.help_text: tk.Text = None # type: ignore
+        self.status_label: tk.Label = None # type: ignore
         self.title("Edit Email Account" if account_id else "Add Email Account")
         self.geometry("520x620")
         self.resizable(False, False)
@@ -47,7 +53,7 @@ class AddAccountDialog(tk.Toplevel):
             self.load_existing()
     def build_ui(self):
         C = {"bg":"#1a1a2e","fg":"#e0e0e0"}
-        tk.Label(self, text="Email Provider:", **C, font=("Segoe UI",10,"bold")).pack(anchor="w",padx=15,pady=(15,2))
+        tk.Label(self, text="Email Provider:", **C, font=("Segoe UI",10,"bold")).pack(anchor="w",padx=15,pady=(15,2)) # type: ignore
         self.provider_var = tk.StringVar(value="Gmail")
         cb = ttk.Combobox(self, textvariable=self.provider_var, values=list(self.PRESETS.keys()), state="readonly", width=30)
         cb.pack(anchor="w",padx=15)
@@ -56,12 +62,12 @@ class AddAccountDialog(tk.Toplevel):
                   ("SMTP Host:","host"),("SMTP Port:","port"),("Daily Limit:","limit")]
         self.entries = {}
         for label, key in fields:
-            tk.Label(self, text=label, **C, font=("Segoe UI",9)).pack(anchor="w",padx=15,pady=(8,1))
+            tk.Label(self, text=label, **C, font=("Segoe UI",9)).pack(anchor="w",padx=15,pady=(8,1)) # type: ignore
             show = "*" if key == "pwd" else ""
             e = tk.Entry(self, bg="#16213e", fg="#e0e0e0", insertbackground="#4ecca3", font=("Segoe UI",10), show=show)
             e.pack(fill="x",padx=15)
             self.entries[key] = e
-        tk.Label(self, text="Security:", **C, font=("Segoe UI",9)).pack(anchor="w",padx=15,pady=(8,1))
+        tk.Label(self, text="Security:", **C, font=("Segoe UI",9)).pack(anchor="w",padx=15,pady=(8,1)) # type: ignore
         self.sec_var = tk.StringVar(value="TLS")
         sf = tk.Frame(self, bg="#1a1a2e")
         sf.pack(anchor="w",padx=15)
@@ -83,12 +89,12 @@ class AddAccountDialog(tk.Toplevel):
         self.on_preset_change(None)
     def on_preset_change(self, event):
         p = self.PRESETS.get(self.provider_var.get(), {})
-        self.entries["host"].delete(0,"end"); self.entries["host"].insert(0, p.get("smtp_host",""))
+        self.entries["host"].delete(0,"end"); self.entries["host"].insert(0, str(p.get("smtp_host","")))
         self.entries["port"].delete(0,"end"); self.entries["port"].insert(0, str(p.get("smtp_port",587)))
         self.entries["limit"].delete(0,"end"); self.entries["limit"].insert(0, str(p.get("daily_limit",500)))
-        self.sec_var.set(p.get("smtp_security","TLS"))
+        self.sec_var.set(str(p.get("smtp_security","TLS")))
         self.help_text.config(state="normal"); self.help_text.delete("1.0","end")
-        self.help_text.insert("1.0", p.get("help","")); self.help_text.config(state="disabled")
+        self.help_text.insert("1.0", str(p.get("help",""))); self.help_text.config(state="disabled")
     def load_existing(self):
         acc = self.am.get_account(self.account_id)
         if not acc: return
@@ -157,11 +163,50 @@ class BulkEmailProApp:
         self.is_sending = False
         self.is_paused = False
         self.send_thread = None
-        self.send_results = []
         self.campaign_start_time = None
-        self.attachment_path = None
+        self.attachment_paths = []
         self.scheduled_time = None
         self.schedule_timer = None
+        
+        # UI Attributes for typing constraints
+        self.notebook: ttk.Notebook = None # type: ignore
+        self.status_bar: tk.Label = None # type: ignore
+        self.subject_entry: tk.Entry = None # type: ignore
+        self.body_editor: scrolledtext.ScrolledText = None # type: ignore
+        self.html_var: tk.BooleanVar = None # type: ignore
+        self.rotate_var: tk.BooleanVar = None # type: ignore
+        self.delay_var: tk.DoubleVar = None # type: ignore
+        self.acc_stats_label: tk.Label = None # type: ignore
+        self.acc_frame: tk.Frame = None # type: ignore
+        self.file_label: tk.Label = None # type: ignore
+        self.col_var: tk.StringVar = None # type: ignore
+        self.col_combo: ttk.Combobox = None # type: ignore
+        self.stats_frame: tk.Frame = None # type: ignore
+        self.email_stats_label: tk.Label = None # type: ignore
+        self.tree_scroll_y: ttk.Scrollbar = None # type: ignore
+        self.tree_scroll_x: ttk.Scrollbar = None # type: ignore
+        self.preview_tree: ttk.Treeview = None # type: ignore
+        self.vars_label: tk.Label = None # type: ignore
+        self.send_from_var: tk.StringVar = None # type: ignore
+        self.send_from_combo: ttk.Combobox = None # type: ignore
+        self.subj_count: tk.Label = None # type: ignore
+        self.attach_label: tk.Label = None # type: ignore
+        self.send_parent: tk.Frame = None # type: ignore
+        self.send_summary: tk.Label = None # type: ignore
+        self.delay_scale: tk.Scale = None # type: ignore
+        self.delay_label: tk.Label = None # type: ignore
+        self.start_btn: tk.Button = None # type: ignore
+        self.pause_btn: tk.Button = None # type: ignore
+        self.stop_btn: tk.Button = None # type: ignore
+        self.progress_bar: ttk.Progressbar = None # type: ignore
+        self.progress_label: tk.Label = None # type: ignore
+        self.stats_label: tk.Label = None # type: ignore
+        self.send_log: scrolledtext.ScrolledText = None # type: ignore
+        self.send_results: list = []
+        self.campaign_start_time: typing.Optional[datetime] = None
+        self.report_summary: tk.Label = None # type: ignore
+        self.report_tree: ttk.Treeview = None # type: ignore
+        
         self.setup_window()
         self.build_ui()
         self.start_queue_processor()
@@ -487,8 +532,8 @@ class BulkEmailProApp:
             self.preview_tree['columns'] = cols
             self.preview_tree['show'] = 'headings'
             for c in cols:
-                self.preview_tree.heading(c, text=c)
-                self.preview_tree.column(c, width=120, minwidth=60)
+                self.preview_tree.heading(c, text=str(c)) # type: ignore
+                self.preview_tree.column(c, width=120, minwidth=60) # type: ignore
             for i, row in enumerate(preview):
                 vals = [str(row.get(c,"")) for c in cols]
                 tag = "even" if i%2==0 else "odd"
@@ -538,9 +583,9 @@ class BulkEmailProApp:
                      command=lambda var=v: self.insert_variable(var)).pack(side="left",padx=2)
         bottom = tk.Frame(parent, bg=C['bg'])
         bottom.pack(fill="x", padx=10, pady=5)
-        tk.Button(bottom, text="📎 Attach File", bg=C['bg3'], fg=C['text'], font=("Segoe UI",9), relief="flat",
+        tk.Button(bottom, text="📎 Attach Files", bg=C['bg3'], fg=C['text'], font=("Segoe UI",9), relief="flat",
                  command=self.attach_file).pack(side="left",padx=3)
-        self.attach_label = tk.Label(bottom, text="No attachment", bg=C['bg'], fg=C['text2'], font=("Segoe UI",8))
+        self.attach_label = tk.Label(bottom, text="0 attachments", bg=C['bg'], fg=C['text2'], font=("Segoe UI",8))
         self.attach_label.pack(side="left",padx=5)
         tk.Button(bottom, text="🛡 Spam Check", bg=C['accent2'], fg=C['bg'], font=("Segoe UI",9,"bold"), relief="flat",
                  command=self.check_spam_score).pack(side="right",padx=3)
@@ -601,10 +646,10 @@ class BulkEmailProApp:
         self.body_editor.insert("insert", var)
         self.body_editor.focus_set()
     def attach_file(self):
-        fp = filedialog.askopenfilename()
-        if fp:
-            self.attachment_path = fp
-            self.attach_label.config(text=f"📎 {os.path.basename(fp)}")
+        fps = filedialog.askopenfilenames()
+        if fps:
+            self.attachment_paths = list(fps)
+            self.attach_label.config(text=f"📎 {len(self.attachment_paths)} files attached")
     def preview_email(self):
         subj = self.subject_entry.get()
         body = self.body_editor.get("1.0","end-1c")
@@ -633,7 +678,7 @@ class BulkEmailProApp:
             sample = {"_email":addr,"name":"Test User","company":"Test Company"}
             subj = self.subject_entry.get() or "Test Email from Bulk Email Pro"
             body = self.body_editor.get("1.0","end-1c") or "<p>This is a test email.</p>"
-            result = self.smtp.send_one(acc["id"], acc, sample, subj, body, self.html_var.get(), self.attachment_path)
+            result = self.smtp.send_one(acc["id"], acc, sample, subj, body, self.html_var.get(), self.attachment_paths)
             self.smtp.disconnect_all()
             msg = f"✅ Test email sent to {addr}!" if result["status"]=="sent" else f"❌ Failed: {result['error']}"
             self.root.after(0, lambda: messagebox.showinfo("Test Result", msg))
@@ -642,12 +687,12 @@ class BulkEmailProApp:
         name = simpledialog.askstring("Save Template","Template name:", parent=self.root)
         if not name: return
         tpath = DATA_DIR / "templates.json"
-        templates = {}
+        templates: dict[str, dict[str, str]] = {}
         if tpath.exists():
             try:
                 with open(tpath,"r") as f: templates = json.load(f)
             except: pass
-        templates[name] = {"subject":self.subject_entry.get(),"body":self.body_editor.get("1.0","end-1c")}
+        templates[name] = {"subject":self.subject_entry.get(),"body":self.body_editor.get("1.0","end-1c")} # type: ignore
         with open(tpath,"w") as f: json.dump(templates, f, indent=2)
         messagebox.showinfo("Saved",f"Template '{name}' saved!")
     def load_template(self):
@@ -713,7 +758,7 @@ class BulkEmailProApp:
         self.delay_scale.pack(side="left",padx=5)
         self.delay_label = tk.Label(delay_frame, text="1.5s", bg=C['bg'], fg=C['text2'], font=("Segoe UI",9))
         self.delay_label.pack(side="left",padx=5)
-        self.delay_var.trace_add("write", lambda *a: self.delay_label.config(text=f"{self.delay_var.get():.1f}s"))
+        self.delay_var.trace_add("write", lambda *a: self.delay_label.config(text=f"{self.delay_var.get():.1f}s")) # type: ignore
         btn_frame = tk.Frame(parent, bg=C['bg'])
         btn_frame.pack(fill="x", padx=10, pady=8)
         self.start_btn = tk.Button(btn_frame, text="▶ START SENDING", bg=C['accent'], fg=C['bg'],
@@ -785,7 +830,7 @@ class BulkEmailProApp:
             email_list=emails, account_manager=self.am,
             subject_template=subj, body_template=body,
             is_html=is_html, delay=delay, use_rotation=use_rot,
-            attachment_path=self.attachment_path,
+            attachment_paths=self.attachment_paths,
             progress_callback=self.on_email_result,
             stop_flag=lambda: not self.is_sending,
             pause_flag=lambda: self.is_paused)
@@ -917,7 +962,7 @@ class BulkEmailProApp:
     def save_campaign_history(self):
         self.refresh_report()
         hist_path = DATA_DIR / "campaigns.json"
-        history = []
+        history: list = []
         if hist_path.exists():
             try:
                 with open(hist_path,"r") as f: history = json.load(f)
@@ -927,7 +972,7 @@ class BulkEmailProApp:
         campaign = {"date":datetime.now().isoformat(),"total":sent+failed,"sent":sent,"failed":failed,
                     "rate":round(sent/max(sent+failed,1)*100,1)}
         history.append(campaign)
-        if len(history)>50: history = history[-50:]
+        if len(history)>50: history = history[-50:] # type: ignore
         with open(hist_path,"w") as f: json.dump(history,f,indent=2)
 
     # ─── MENU ─────────────────────────────────────────────────────

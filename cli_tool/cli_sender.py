@@ -224,7 +224,8 @@ def validate(excel, column):
 @click.option("--dry-run", is_flag=True, help="Preview without sending")
 @click.option("--output", default=None, type=click.Path(), help="Save report to CSV")
 @click.option("--html/--text", "is_html", default=True, help="HTML or plain text format")
-def send(excel, column, subject, body_file, body, account, rotate, delay, send_limit, dry_run, output, is_html):
+@click.option("--attachment", multiple=True, type=click.Path(exists=True), help="Path to file attachment (can be used multiple times)")
+def send(excel, column, subject, body_file, body, account, rotate, delay, send_limit, dry_run, output, is_html, attachment):
     """Send a bulk email campaign."""
     # Load body
     if body_file:
@@ -299,6 +300,7 @@ def send(excel, column, subject, body_file, body, account, rotate, delay, send_l
                 email_list=emails, account_manager=am,
                 subject_template=subject, body_template=email_body,
                 is_html=is_html, delay=delay, use_rotation=rotate,
+                attachment_paths=list(attachment),
                 progress_callback=cb)
     else:
         def cb(idx, total, result):

@@ -198,6 +198,28 @@ def validate_emails():
     stats = ep.validate_and_load(col)
     return jsonify({"stats": stats, "vars": ep.get_personalization_vars(), "preview": ep.get_preview(20)})
 
+@app.route('/campaign/upload-attachments', methods=['POST'])
+@login_required
+def upload_attachments():
+    uid = session['user_id']
+    if 'attachments' not in request.files:
+        return jsonify({"success": False, "error": "No files uploaded"})
+    
+    files = request.files.getlist('attachments')
+    saved_paths = []
+    
+    save_dir = get_user_dir(uid) / 'attachments'
+    save_dir.mkdir(exist_ok=True)
+    
+    for f in files:
+        if f.filename:
+            fname = secure_filename(f.filename)
+            fpath = save_dir / fname
+            f.save(str(fpath))
+            saved_paths.append(str(fpath))
+            
+    return jsonify({"success": True, "paths": saved_paths})
+
 @app.route('/campaign/launch', methods=['POST'])
 @login_required
 def launch_campaign():
@@ -229,7 +251,7 @@ def launch_campaign():
             email_list=ep.valid_emails, account_manager=am,
             subject_template=data.get('subject',''), body_template=data.get('body',''),
             is_html=data.get('is_html',True), delay=float(data.get('delay',1.5)),
-            use_rotation=data.get('rotation',False), attachment_path=None,
+            use_rotation=data.get('rotation',False), attachment_paths=data.get('attachment_paths', []),
             progress_callback=progress_cb,
             stop_flag=lambda: camp["status"]=="stopped",
             pause_flag=lambda: camp["is_paused"])

@@ -25,8 +25,8 @@
         </div>
         <p class="acc-email">{{ acc.email }}</p>
         <div class="progress-bar">
-            <div class="progress-fill"
-                style="width:{{ (acc.sent_today / acc.daily_limit * 100) if acc.daily_limit > 0 else 0 }}%"></div>
+            {% set percentage = (acc.sent_today / acc.daily_limit * 100) if acc.daily_limit > 0 else 0 %}
+            <div class="progress-fill" style="width:{{ percentage }}%"></div>
         </div>
         <p class="acc-usage">{{ acc.sent_today }} / {{ acc.daily_limit }} sent today</p>
         {% if acc.last_error %}<p class="acc-error">{{ acc.last_error[:80] }}</p>{% endif %}

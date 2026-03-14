@@ -385,14 +385,18 @@ class SMTPEngine:
     def build_mime_message(self, sender_email: str, sender_name: str,
                            recipient_email: str, subject: str, body: str,
                            is_html: bool = True,
-                           attachment_path: str = None,
+                           attachment_paths: list = None,
                            cc: str = '', bcc: str = '',
                            reply_to: str = None,
                            unsubscribe_url: str = None) -> MIMEMultipart:
-        """Build a complete MIME message with anti-spam headers and plain-text fallback."""
+        """Build a complete MIME message with anti-spam headers, plain-text fallback, and attachments."""
         sender_domain = sender_email.split('@')[1] if '@' in sender_email else 'localhost'
 
-        if attachment_path and os.path.isfile(attachment_path):
+        # Ensure attachment_paths is a list (for backward compatibility if someone passes a string)
+        if isinstance(attachment_paths, str):
+            attachment_paths = [attachment_paths]
+
+        if attachment_paths and any(os.path.isfile(p) for p in attachment_paths):
             msg = MIMEMultipart('mixed')
             body_container = MIMEMultipart('alternative')
             msg.attach(body_container)
@@ -437,25 +441,27 @@ class SMTPEngine:
         else:
             body_container.attach(MIMEText(body, 'plain', 'utf-8'))
 
-        # ── Attachment ──
-        if attachment_path and os.path.isfile(attachment_path):
-            try:
-                file_size = os.path.getsize(attachment_path)
-                if file_size > 25 * 1024 * 1024:  # 25MB limit
-                    self.logger.warning(f"Attachment too large: {file_size/1024/1024:.1f}MB (max 25MB)")
-                else:
-                    with open(attachment_path, 'rb') as f:
-                        part = MIMEBase('application', 'octet-stream')
-                        part.set_payload(f.read())
-                        encoders.encode_base64(part)
-                        filename = os.path.basename(attachment_path)
-                        part.add_header(
-                            'Content-Disposition',
-                            f'attachment; filename="{filename}"'
-                        )
-                        msg.attach(part)
-            except IOError as e:
-                self.logger.warning(f"Could not attach file {attachment_path}: {e}")
+        # ── Attachments ──
+        if attachment_paths:
+            for attachment_path in attachment_paths:
+                if attachment_path and os.path.isfile(attachment_path):
+                    try:
+                        file_size = os.path.getsize(attachment_path)
+                        if file_size > 25 * 1024 * 1024:  # 25MB limit
+                            self.logger.warning(f"Attachment too large: {file_size/1024/1024:.1f}MB (max 25MB)")
+                        else:
+                            with open(attachment_path, 'rb') as f:
+                                part = MIMEBase('application', 'octet-stream')
+                                part.set_payload(f.read())
+                                encoders.encode_base64(part)
+                                filename = os.path.basename(attachment_path)
+                                part.add_header(
+                                    'Content-Disposition',
+                                    f'attachment; filename="{filename}"'
+                                )
+                                msg.attach(part)
+                    except IOError as e:
+                        self.logger.warning(f"Could not attach file {attachment_path}: {e}")
 
         return msg
 
@@ -463,7 +469,7 @@ class SMTPEngine:
 
     def send_one(self, account_id: str, account: dict, recipient: dict,
                  subject_template: str, body_template: str,
-                 is_html: bool = True, attachment_path: str = None,
+                 is_html: bool = True, attachment_paths: list = None,
                  cc: str = '', bcc: str = '',
                  reply_to: str = None,
                  unsubscribe_url: str = None) -> dict:
@@ -500,7 +506,7 @@ class SMTPEngine:
                 subject=subject,
                 body=body,
                 is_html=is_html,
-                attachment_path=attachment_path,
+                attachment_paths=attachment_paths,
                 cc=cc,
                 bcc=bcc,
                 reply_to=reply_to or account.get("reply_to", account["email"]),
@@ -581,7 +587,7 @@ class SMTPEngine:
                   is_html: bool = True,
                   delay: float = 1.0,
                   use_rotation: bool = True,
-                  attachment_path: str = None,
+                  attachment_paths: list = None,
                   cc: str = '', bcc: str = '',
                   reply_to: str = None,
                   unsubscribe_url: str = None,
@@ -759,7 +765,7 @@ class SMTPEngine:
                 result = self.send_one(
                     current_account_id, current_account, recipient,
                     subject_template, body_template,
-                    is_html, attachment_path, cc, bcc,
+                    is_html, attachment_paths, cc, bcc,
                     reply_to, unsubscribe_url
                 )
 
